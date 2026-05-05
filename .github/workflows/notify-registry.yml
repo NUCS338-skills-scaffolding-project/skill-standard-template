@@ -1,0 +1,64 @@
+name: Notify Skills Registry
+
+# Fires whenever a skill file changes on main, telling the central registry
+# to re-crawl and rebuild catalog.json immediately rather than waiting for
+# the nightly scheduled run.
+#
+# Prerequisites (one-time setup per team repo):
+#   1. Ask the Admin to create a fine-grained PAT with:
+#        - Repo scope: skills-registry
+#        - Permission: Contents → Read & Write  (needed for repository_dispatch)
+#   2. Store it as a repo secret named REGISTRY_DISPATCH_TOKEN in *this* repo.
+#      (Settings → Secrets and variables → Actions → New repository secret)
+#
+# If REGISTRY_DISPATCH_TOKEN is not set, the notification step is skipped
+# gracefully — the nightly build will still pick up your changes.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'metadata.yaml'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    name: Ping registry to rebuild
+
+    steps:
+      - name: Check for dispatch token
+        id: token_check
+        run: |
+          if [ -z "${{ secrets.REGISTRY_DISPATCH_TOKEN }}" ]; then
+            echo "REGISTRY_DISPATCH_TOKEN not set — skipping notification."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch rebuild to skills-registry
+        if: steps.token_check.outputs.skip == 'false'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.REGISTRY_DISPATCH_TOKEN }}
+          # Target the central registry repo — replace ORG with your GitHub org name
+          repository: ${{ github.repository_owner }}/skills-registry
+          event-type: skills-updated
+          client-payload: |
+            {
+              "repo":   "${{ github.repository }}",
+              "ref":    "${{ github.ref }}",
+              "sha":    "${{ github.sha }}",
+              "sender": "${{ github.actor }}"
+            }
+
+      - name: Log result
+        run: |
+          if [ "${{ steps.token_check.outputs.skip }}" = "true" ]; then
+            echo "ℹ Notification skipped (no REGISTRY_DISPATCH_TOKEN)."
+            echo "  The nightly catalog build will pick up your changes."
+          else
+            echo "✓ Dispatched 'skills-updated' to skills-registry."
+            echo "  The catalog will rebuild in ~1 minute."
+          fi
