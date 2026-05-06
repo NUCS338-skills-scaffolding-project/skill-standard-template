@@ -87,7 +87,17 @@ No `.env` changes needed for local development.
 
 ## 4 — Build the catalog
 
-The orchestrator reads skills from `catalog.json` in the skills-registry folder. Build it once before starting:
+`catalog.json` in the skills-registry folder is already committed and contains all team skills from GitHub. **Do not rebuild it unless you are explicitly testing the catalog builder.**
+
+> ⚠️ **Warning:** Running `catalog_builder.py --local` replaces `catalog.json` entirely — it will wipe all 70+ skills from other teams and leave only what's in your local sibling repos.
+
+**For day-to-day skill development, skip this step entirely.** Just edit your `skills.md`, push to GitHub, then reload the orchestrator:
+
+```bash
+curl -X POST http://localhost:8080/registry/refresh
+```
+
+**Only run the builder if you need to test it offline:**
 
 ```bash
 cd ../skills-registry
@@ -95,13 +105,13 @@ pip install pyyaml          # one-time, if not already installed
 python scripts/catalog_builder.py --local ..
 ```
 
-`..` points at the parent folder — the builder scans every sibling repo (including your team repo), validates all `skills.md` files, and writes `catalog.json` here. No GitHub token or account needed for this step.
-
-Check the output for any validation errors:
+Check the output for validation errors:
 
 ```bash
 cat build_report.md
 ```
+
+Restore the full catalog afterwards with `git checkout catalog.json`.
 
 ---
 
