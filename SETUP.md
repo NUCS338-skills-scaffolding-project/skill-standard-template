@@ -70,6 +70,8 @@ GEMINI_API_KEY=AI...
 DEFAULT_MODEL=gemini/gemini-2.0-flash
 ```
 
+> ⚠️ **Gemini free tier quota:** The free tier has very low limits and you will hit `429 TooManyRequests` errors quickly during testing. If this happens, either enable billing on your Google Cloud project (costs are minimal — ~$0.075/1M tokens) or switch to Anthropic or OpenAI instead. Switching is a one-line change in `.env`.
+
 Everything else works out of the box for local development.
 
 ---
